@@ -17,37 +17,39 @@ var async = require('async'),
 		.alias('out', 'o')
 		.argv;
 
-var sourceText = fs.readFileSync("luke.txt", { encoding: 'utf8' });
-
-async.mapLimit(
-	sourceText.match(new RegExp(".{1," + QR_CODE_CAPACITY + "}", "g")), 
-	5, 
-	function (text, callback) {
-		QRCode.draw(text, undefined, function (err, qrCanvas) {
-			var img = new Canvas.Image;
-			img.src = qrCanvas.toBuffer();
-			callback(null, img);
+var sourceText = fs.readFileSync("luke.txt", { encoding: 'utf8' }),
+	textChunks = sourceText.match(new RegExp(".{1," + QR_CODE_CAPACITY + "}", "g")),
+	page = 1,
+	row = 0,
+	col = 0,
+	canvas = new Canvas(CARD_SIZE_X, CARD_SIZE_Y),
+	ctx = canvas.getContext('2d');
+console.log(textChunks.length + " chunks for " + (textChunks.length / QRS_PER_PAGE) + " pages");
+async.each(textChunks, function (text, callback) {
+	QRCode.draw(text, undefined, function (err, qrCanvas) {
+		var img = new Canvas.Image;
+		img.src = qrCanvas.toBuffer();
+		ctx.drawImage(img, col * QR_CODE_SIZE, row * QR_CODE_SIZE, QR_CODE_SIZE, QR_CODE_SIZE);
+		col++;
+		if (col == COLS_PER_PAGE) {
+			row++;
+			col = 0;
+		}
+		if (row == ROWS_PER_PAGE) {
+			canvas.toBuffer(function (err, buf) {
+				fs.writeFile(argv.out + '/page' + page + '.png', buf);
+				page++;
+				row = 0;
+				canvas = new Canvas(CARD_SIZE_X, CARD_SIZE_Y);
+				ctx = canvas.getContext('2d');
+				callback (null);
+			});
+		} else {
+			callback(null);
+		}
 	});
-}, function (err, images) {
-	var totalPages = Math.floor(images.length / QRS_PER_PAGE);
-	async.each(_.range(totalPages), function (page, callback) {
-		var canvas = new Canvas(CARD_SIZE_X, CARD_SIZE_Y),
-		  	ctx = canvas.getContext('2d');
-		ctx.font = '30px Impact';
-		ctx.fillText("Page " + page, 50, 100); 
-		for(var row = 0; row < ROWS_PER_PAGE; row++) {
-			for(var col = 0; col < COLS_PER_PAGE; col++) {
-				ctx.drawImage(images[(page - 1) * QRS_PER_PAGE + row * COLS_PER_PAGE + col], col * QR_CODE_SIZE, row * QR_CODE_SIZE, QR_CODE_SIZE, QR_CODE_SIZE);
-			}
-		} 
-		canvas.toBuffer(function (err, buf) {
-  			if (err) throw err;
-			fs.writeFile(argv.out + '/page' + page + '.png', buf);
-			callback (null);
-		});
-	}, function (err) {
-		console.log("Finished");
-	});
+}, function (err) {
+	console.log("Finished");
 });
 
 
