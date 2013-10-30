@@ -16,62 +16,97 @@ var CARD_SIZE_X = 1795,
 	CARD_SIZE_Y = 1287, // the final artwork size is 109mm x 152mm
 	SAFE_AREA_X = 40,
 	SAFE_AREA_Y = 40, // determined experimentally by uploading the images to Moo
-	QR_CODE_CAPACITY = 1270, // "level H" QR codes should support up to 1273 characters, but I have seen the qrcode library failing beyond 1270
-	QR_CODE_SIZE = 550,  
+	MAX_QR_CODE_CAPACITY = 1270, // "level H" QR codes should support up to 1273 characters, but I have seen the qrcode library failing beyond 1270
+	QR_CODE_SIZE = 570,  
 	FOOTER_FONT_SIZE = 30,
 	FOOTER_HEIGHT = FOOTER_FONT_SIZE * 2,
 	ROWS_PER_PAGE = Math.floor((CARD_SIZE_Y - FOOTER_HEIGHT) / QR_CODE_SIZE),
 	COLS_PER_PAGE = Math.floor(CARD_SIZE_X / QR_CODE_SIZE),
-	QRS_PER_PAGE = ROWS_PER_PAGE * COLS_PER_PAGE;
+	QRS_PER_PAGE = ROWS_PER_PAGE * COLS_PER_PAGE,
+	HORIZONTAL_SPACING = Math.floor((CARD_SIZE_X - SAFE_AREA_X * 2 - QR_CODE_SIZE * COLS_PER_PAGE) / (COLS_PER_PAGE - 1)),
+	VERTICAL_SPACING = Math.floor((CARD_SIZE_Y - SAFE_AREA_Y * 2 - QR_CODE_SIZE * ROWS_PER_PAGE - FOOTER_HEIGHT) / (ROWS_PER_PAGE - 1));
 
-var savePages = function (sourceText, options, callback) {
-	options = options || { };
-	options.decompression = 1. - (options.decompression ? parseFloat(options.decompression) / 100. : 0.);
-	options.footer = options.footer ? " - " + options.footer : "";
-	// the lines below reduces each QR code capacity so to fully fill the 
-	// minimum number of pages is it necessary to use anyway
-	var	mimimumNumberOfQRCodes = Math.ceil(sourceText.length / QR_CODE_CAPACITY / options.decompression),
-		minimumNumberOfPages = Math.ceil(mimimumNumberOfQRCodes / QRS_PER_PAGE),
-		qrCodeCapacity = Math.ceil(sourceText.length / minimumNumberOfPages / QRS_PER_PAGE),
-		textChunks = sourceText.match(new RegExp("[\\s\\S]{1," + qrCodeCapacity + "}", "g")),
-		totPages = Math.ceil(textChunks.length / QRS_PER_PAGE),
-		horizontalSpacing = Math.floor((CARD_SIZE_X - SAFE_AREA_X * 2 - QR_CODE_SIZE * COLS_PER_PAGE) / (COLS_PER_PAGE - 1)),
-		verticalSpacing = Math.floor((CARD_SIZE_Y - SAFE_AREA_Y * 2 - QR_CODE_SIZE * ROWS_PER_PAGE - FOOTER_HEIGHT) / (ROWS_PER_PAGE - 1));
-	async.each(_.range(1, totPages + 1), function (page, pageCallback) {
-		var	canvas = new Canvas(CARD_SIZE_X, CARD_SIZE_Y),
-			ctx = canvas.getContext('2d'),
-			footerText = 'Page ' + page + ' of ' + totPages + options.footer,
-			// TODO: the calculation below seems unreliable
-			footerWidth = ctx.measureText(footerText).width;
-		ctx.fillStyle="#FFFFFF";
-		ctx.fillRect(0, 0, CARD_SIZE_X, CARD_SIZE_Y);
-		async.each(_.range(ROWS_PER_PAGE), function (row, rowCallback) {
-			async.each(_.range(COLS_PER_PAGE), function (col, colCallback) {
-				var text = textChunks[(page - 1) * QRS_PER_PAGE + row * ROWS_PER_PAGE + col];
-				if (text) {
-					// console.log("text's length is " + text.length);
-					QRCode.draw(text, undefined, function (err, qrCanvas) {
-						var img = new Canvas.Image;
-						img.src = qrCanvas.toBuffer();
-						ctx.drawImage(img, SAFE_AREA_X + col * (QR_CODE_SIZE + horizontalSpacing), SAFE_AREA_Y + row * (QR_CODE_SIZE + verticalSpacing), QR_CODE_SIZE, QR_CODE_SIZE);
-						colCallback(null);
-					});
-				} else
-					colCallback(null);
-			}, rowCallback);
-		},
-		function (err) {
-			ctx.fillStyle="#000000";
-			ctx.font = FOOTER_FONT_SIZE + 'px Arial';
-			ctx.fillText(footerText, Math.floor((CARD_SIZE_X - footerWidth) / 2), CARD_SIZE_Y - SAFE_AREA_Y - FOOTER_HEIGHT + Math.floor((FOOTER_HEIGHT - FOOTER_FONT_SIZE) / 2));
-			canvas.toBuffer(function (err, buf) {
-				fs.writeFileSync(argv.out + '/page' + page + '.png', buf);
-				pageCallback(null);
-			});
+var makeQRCodeImage = function (sourceText, targetSize, callback) {
+	var	canvas = new Canvas(CARD_SIZE_X, CARD_SIZE_Y),
+		ctx = canvas.getContext('2d'),
+		img = undefined;
+	sourceText = sourceText.substring(0, Math.min(sourceText.length, MAX_QR_CODE_CAPACITY)),
+	async.doWhilst(function (callback) {
+		QRCode.draw(sourceText, undefined, function (err, qrCanvas) {
+			img = new Canvas.Image;
+			img.src = qrCanvas.toBuffer();
+			callback(null);
 		});
-	}, callback);
+	}, function () {
+		var found = img.width <= targetSize;
+		if (!found) sourceText = sourceText.substring(0, Math.floor(sourceText.length * Math.pow(targetSize, 2) / Math.pow(img.width, 2)));
+		return !found;
+	}, function (err) {
+		callback(err, sourceText, img);
+	});
 };
 
+var savePages = function (sourceText, options, callback) {
+
+	var createHeader = function () {
+		canvas = new Canvas(CARD_SIZE_X, CARD_SIZE_Y),
+		ctx = canvas.getContext('2d');
+		ctx.fillStyle="#FFFFFF";
+	    ctx.fillRect(0, 0, CARD_SIZE_X, CARD_SIZE_Y);
+	};
+
+	var createFooter = function () {
+		var footerText = 'Card ' + page + options.footer,
+			footerWidth = ctx.measureText(footerText).width;
+		ctx.fillStyle="#000000";
+	    ctx.font = FOOTER_FONT_SIZE + 'px Arial';
+	    ctx.fillText(footerText, Math.floor((CARD_SIZE_X - footerWidth) / 2), CARD_SIZE_Y - SAFE_AREA_Y - FOOTER_HEIGHT + Math.floor((FOOTER_HEIGHT - FOOTER_FONT_SIZE) / 2));				
+	};
+
+	options = options || { };
+	options.footer = options.footer ? " - " + options.footer : "";
+	var page = 1,
+		row = 0,
+		col = 0,
+		foundLastPage = false,
+		canvas,
+		ctx;
+	createHeader();
+	async.whilst(function () {
+		return !foundLastPage;
+	}, function (callback) {
+		makeQRCodeImage(sourceText, QR_CODE_SIZE, function (err, text, image) {
+			console.log("========== Card " + page + " Row " + row + " Col " + col + " ==========");
+			console.log(text);
+			foundLastPage = sourceText.length == text.length;
+			sourceText = sourceText.substring(text.length, sourceText.length - text.length);
+			ctx.drawImage(image, SAFE_AREA_X + col * (QR_CODE_SIZE + HORIZONTAL_SPACING), SAFE_AREA_Y + row * (QR_CODE_SIZE + VERTICAL_SPACING));
+			col++;
+			if (col == COLS_PER_PAGE) {
+				col = 0;
+				row++;
+			}
+			if (row == ROWS_PER_PAGE) {
+				createFooter();
+                canvas.toBuffer(function (err, buf) {
+					fs.writeFileSync(argv.out + '/card' + page + '.png', buf);
+					page++;
+					row = 0;
+					createHeader();
+					callback(null);
+				});
+			} else {
+				callback(null);
+			}
+		});
+	}, function (err) {
+		createFooter();
+        canvas.toBuffer(function (err, buf) {
+			fs.writeFileSync(argv.out + '/card' + page + '.png', buf);
+			callback(null);
+		});
+	});
+};
 
 var sourceText = fs.readFileSync(argv.in, { encoding: 'utf8' });
 savePages(sourceText, { decompression: argv.decompression, footer: argv.footer }, function (err) {
