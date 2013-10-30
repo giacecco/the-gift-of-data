@@ -1,3 +1,4 @@
 *.txt
 out*
+moo_credentials.json
 node_modules

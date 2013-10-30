@@ -17,7 +17,7 @@ var CARD_SIZE_X = 1795,
 	SAFE_AREA_X = 40,
 	SAFE_AREA_Y = 40, // determined experimentally by uploading the images to Moo
 	MAX_QR_CODE_CAPACITY = 1270, // "level H" QR codes should support up to 1273 characters, but I have seen the qrcode library failing beyond 1270
-	QR_CODE_SIZE = 570,  
+	QR_CODE_SIZE = 580,  
 	FOOTER_FONT_SIZE = 30,
 	FOOTER_HEIGHT = FOOTER_FONT_SIZE * 2,
 	ROWS_PER_PAGE = Math.floor((CARD_SIZE_Y - FOOTER_HEIGHT) / QR_CODE_SIZE),
@@ -76,10 +76,10 @@ var savePages = function (sourceText, options, callback) {
 		return !foundLastPage;
 	}, function (callback) {
 		makeQRCodeImage(sourceText, QR_CODE_SIZE, function (err, text, image) {
-			console.log("========== Card " + page + " Row " + row + " Col " + col + " ==========");
-			console.log(text);
+			// console.log("========== Card " + page + " Row " + row + " Col " + col + " ==========");
+			// console.log(text);
 			foundLastPage = sourceText.length == text.length;
-			sourceText = sourceText.substring(text.length, sourceText.length - text.length);
+			sourceText = sourceText.substring(text.length, sourceText.length);
 			ctx.drawImage(image, SAFE_AREA_X + col * (QR_CODE_SIZE + HORIZONTAL_SPACING), SAFE_AREA_Y + row * (QR_CODE_SIZE + VERTICAL_SPACING));
 			col++;
 			if (col == COLS_PER_PAGE) {
