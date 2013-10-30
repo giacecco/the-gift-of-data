@@ -30,22 +30,24 @@ async.mapLimit(
 	});
 }, function (err, images) {
 	var totalPages = Math.floor(images.length / QRS_PER_PAGE);
-	for(var page = 1; page <= totalPages; page++) {
+	async.each(_.range(totalPages), function (page, callback) {
 		var canvas = new Canvas(CARD_SIZE_X, CARD_SIZE_Y),
-			out = fs.createWriteStream(argv.out + '/page' + page + '.png'),
-			stream = canvas.pngStream(),
 		  	ctx = canvas.getContext('2d');
-		stream.on('data', function(chunk) { out.write(chunk); });
-		stream.on('end', function() { console.log('saved png'); });
+		ctx.font = '30px Impact';
+		ctx.fillText("Page " + page, 50, 100); 
 		for(var row = 0; row < ROWS_PER_PAGE; row++) {
 			for(var col = 0; col < COLS_PER_PAGE; col++) {
 				ctx.drawImage(images[(page - 1) * QRS_PER_PAGE + row * COLS_PER_PAGE + col], col * QR_CODE_SIZE, row * QR_CODE_SIZE, QR_CODE_SIZE, QR_CODE_SIZE);
 			}
-		}
-		out = undefined;
-		stream = undefined;
-		canvas = undefined;
-	}
+		} 
+		canvas.toBuffer(function (err, buf) {
+  			if (err) throw err;
+			fs.writeFile(argv.out + '/page' + page + '.png', buf);
+			callback (null);
+		});
+	}, function (err) {
+		console.log("Finished");
+	});
 });
 
 
