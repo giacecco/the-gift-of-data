@@ -1,15 +1,3 @@
-var CARD_SIZE_X = 1795,
-	CARD_SIZE_Y = 1287, // the final artwork size is 109mm x 152mm
-	SAFE_AREA_X = 40,
-	SAFE_AREA_Y = 40, // determined experimentally by uploading the images to Moo
-	QR_CODE_CAPACITY = 1270, // "level H" QR codes should support up to 1273 characters, but I have seen the qrcode library failing beyond 1270
-	QR_CODE_SIZE = 550,  
-	FOOTER_FONT_SIZE = 30,
-	FOOTER_HEIGHT = FOOTER_FONT_SIZE * 2,
-	ROWS_PER_PAGE = Math.floor((CARD_SIZE_Y - FOOTER_HEIGHT) / QR_CODE_SIZE),
-	COLS_PER_PAGE = Math.floor(CARD_SIZE_X / QR_CODE_SIZE),
-	QRS_PER_PAGE = ROWS_PER_PAGE * COLS_PER_PAGE;
-
 var async = require('async'),
 	fs = require('fs'),
 	Canvas = require('canvas'),
@@ -24,9 +12,19 @@ var async = require('async'),
 		.alias('footer', 'f')
 		.argv;
 
+var CARD_SIZE_X = 1795,
+	CARD_SIZE_Y = 1287, // the final artwork size is 109mm x 152mm
+	SAFE_AREA_X = 40,
+	SAFE_AREA_Y = 40, // determined experimentally by uploading the images to Moo
+	QR_CODE_CAPACITY = 1270, // "level H" QR codes should support up to 1273 characters, but I have seen the qrcode library failing beyond 1270
+	QR_CODE_SIZE = 550,  
+	FOOTER_FONT_SIZE = 30,
+	FOOTER_HEIGHT = FOOTER_FONT_SIZE * 2,
+	ROWS_PER_PAGE = Math.floor((CARD_SIZE_Y - FOOTER_HEIGHT) / QR_CODE_SIZE),
+	COLS_PER_PAGE = Math.floor(CARD_SIZE_X / QR_CODE_SIZE),
+	QRS_PER_PAGE = ROWS_PER_PAGE * COLS_PER_PAGE;
 
 var savePages = function (sourceText, options, callback) {
-	console.log("Mystery here, why is this undefined: " + QR_CODE_CAPACITY);
 	options = options || { };
 	options.decompression = 1. - (options.decompression ? parseFloat(options.decompression) / 100. : 0.);
 	options.footer = options.footer ? " - " + options.footer : "";
@@ -34,8 +32,8 @@ var savePages = function (sourceText, options, callback) {
 	// minimum number of pages is it necessary to use anyway
 	var	mimimumNumberOfQRCodes = Math.ceil(sourceText.length / QR_CODE_CAPACITY / options.decompression),
 		minimumNumberOfPages = Math.ceil(mimimumNumberOfQRCodes / QRS_PER_PAGE),
-		QR_CODE_CAPACITY = Math.ceil(sourceText.length / minimumNumberOfPages / QRS_PER_PAGE),
-		textChunks = sourceText.match(new RegExp("[\\s\\S]{1," + QR_CODE_CAPACITY + "}", "g")),
+		qrCodeCapacity = Math.ceil(sourceText.length / minimumNumberOfPages / QRS_PER_PAGE),
+		textChunks = sourceText.match(new RegExp("[\\s\\S]{1," + qrCodeCapacity + "}", "g")),
 		totPages = Math.ceil(textChunks.length / QRS_PER_PAGE),
 		horizontalSpacing = Math.floor((CARD_SIZE_X - SAFE_AREA_X * 2 - QR_CODE_SIZE * COLS_PER_PAGE) / (COLS_PER_PAGE - 1)),
 		verticalSpacing = Math.floor((CARD_SIZE_Y - SAFE_AREA_Y * 2 - QR_CODE_SIZE * ROWS_PER_PAGE - FOOTER_HEIGHT) / (ROWS_PER_PAGE - 1));
