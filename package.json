@@ -1,0 +1,28 @@
+{
+  "name": "the-gift-of-data",
+  "version": "0.0.1",
+  "author": "Gianfranco Cecconi <gianfranco.cecconi@digitalcontraptionsimaginarium.co.uk>",
+  "description": "Does what it says on the tin",
+  "contributors": [ 
+    {
+      "name": "Gianfranco Cecconi",
+      "email": "gianfranco.cecconi@digitalcontraptionsimaginarium.co.uk"
+    } 
+  ],
+  "keywords": [
+    "ODI",
+    "Open Data Institute",
+    "Open Data"
+  ],
+  "dependencies" : {
+    "async": ">=0.2.9",
+    "canvas": ">=1.1.1",
+    "optimist": ">=0.6.0",
+    "qrcode": ">=0.2.8",
+    "underscore": ">=1.5.2"
+  },
+  "license": "MIT",
+  "engines": {
+    "node": ">=0.10.18"
+  }
+}
