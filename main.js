@@ -48,6 +48,8 @@ var makeQRCodeImage = function (sourceText, targetSize, callback) {
 
 
 var createPages = function (sourceText, options, callback) {
+	options = options || { };
+	options.footer = options.footer ? " - " + options.footer : "";
 	createPagesPass1(sourceText, options, function (err, pages) {
 		createPagesPass2(pages, options, function (err, pages) {
 			callback(err, pages);
@@ -64,16 +66,6 @@ var createPagesPass1 = function (sourceText, options, callback) {
 	    ctx.fillRect(0, 0, CARD_SIZE_X, CARD_SIZE_Y);
 	};
 
-	var createFooter = function () {
-		var footerText = 'Card ' + page + options.footer,
-			footerWidth = ctx.measureText(footerText).width;
-		ctx.fillStyle="#000000";
-	    ctx.font = FOOTER_FONT_SIZE + 'px Arial';
-	    ctx.fillText(footerText, Math.floor((CARD_SIZE_X - footerWidth) / 2), CARD_SIZE_Y - SAFE_AREA_Y - FOOTER_HEIGHT + Math.floor((FOOTER_HEIGHT - FOOTER_FONT_SIZE) / 2));				
-	};
-
-	options = options || { };
-	options.footer = options.footer ? " - " + options.footer : "";
 	var pages = [ ],
 		page = 1,
 		row = 0,
@@ -97,7 +89,6 @@ var createPagesPass1 = function (sourceText, options, callback) {
 				row++;
 			}
 			if (row == ROWS_PER_PAGE) {
-				createFooter();
 				pages.push(canvas);
 				page++;
 				row = 0;
@@ -106,9 +97,22 @@ var createPagesPass1 = function (sourceText, options, callback) {
 			callback(null);
 		});
 	}, function (err) {
-		createFooter();
 		pages.push(canvas);
 		callback(null, pages);
+	});
+};
+
+var createPagesPass2 = function (pages, options, callback) {
+	async.eachLimit(_.range(1, pages.length + 1), 2, function (pageNo, callback) {
+		var ctx = pages[pageNo - 1].getContext('2d'),
+			footerText = 'Card ' + pageNo + " of " + pages.length + options.footer,
+			footerWidth = ctx.measureText(footerText).width;
+		ctx.fillStyle="#000000";
+	    ctx.font = FOOTER_FONT_SIZE + 'px Arial';
+	    ctx.fillText(footerText, Math.floor((CARD_SIZE_X - footerWidth) / 2), CARD_SIZE_Y - SAFE_AREA_Y - FOOTER_HEIGHT + Math.floor((FOOTER_HEIGHT - FOOTER_FONT_SIZE) / 2));				
+	    callback(null);
+	}, function (err) {
+		callback(err, pages);
 	});
 };
 
@@ -120,7 +124,7 @@ var savePages = function (sourceText, options, callback) {
 				callback(null);
 			});
 		}, function (err) {
-
+			callback(err);
 		});
 	});
 };
