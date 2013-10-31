@@ -46,7 +46,16 @@ var makeQRCodeImage = function (sourceText, targetSize, callback) {
 	});
 };
 
-var savePages = function (sourceText, options, callback) {
+
+var createPages = function (sourceText, options, callback) {
+	createPagesPass1(sourceText, options, function (err, pages) {
+		createPagesPass2(pages, options, function (err, pages) {
+			callback(err, pages);
+		})
+	})	
+};
+
+var createPagesPass1 = function (sourceText, options, callback) {
 
 	var createHeader = function () {
 		canvas = new Canvas(CARD_SIZE_X, CARD_SIZE_Y),
@@ -65,7 +74,8 @@ var savePages = function (sourceText, options, callback) {
 
 	options = options || { };
 	options.footer = options.footer ? " - " + options.footer : "";
-	var page = 1,
+	var pages = [ ],
+		page = 1,
 		row = 0,
 		col = 0,
 		foundLastPage = false,
@@ -88,25 +98,33 @@ var savePages = function (sourceText, options, callback) {
 			}
 			if (row == ROWS_PER_PAGE) {
 				createFooter();
-                canvas.toBuffer(function (err, buf) {
-					fs.writeFileSync(argv.out + '/card' + page + '.png', buf);
-					page++;
-					row = 0;
-					createHeader();
-					callback(null);
-				});
-			} else {
-				callback(null);
+				pages.push(canvas);
+				page++;
+				row = 0;
+				createHeader();
 			}
+			callback(null);
 		});
 	}, function (err) {
 		createFooter();
-        canvas.toBuffer(function (err, buf) {
-			fs.writeFileSync(argv.out + '/card' + page + '.png', buf);
-			callback(null);
+		pages.push(canvas);
+		callback(null, pages);
+	});
+};
+
+var savePages = function (sourceText, options, callback) {
+	createPages(sourceText, options, function (err, pages) {
+		async.eachLimit(_.range(1, pages.length + 1), 2, function (pageNo, callback) {
+		    pages[pageNo - 1].toBuffer(function (err, buf) {
+				fs.writeFileSync(argv.out + '/card' + pageNo + '.png', buf);
+				callback(null);
+			});
+		}, function (err) {
+
 		});
 	});
 };
+
 
 var sourceText = fs.readFileSync(argv.in, { encoding: 'utf8' });
 savePages(sourceText, { decompression: argv.decompression, footer: argv.footer }, function (err) {

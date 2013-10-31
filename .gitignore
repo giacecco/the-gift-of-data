@@ -1,4 +1,4 @@
 *.txt
-out*
+*.cards
 moo_credentials.json
 node_modules
