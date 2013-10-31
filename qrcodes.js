@@ -3,7 +3,7 @@ var async = require('async'),
 	QRCode = require('qrcode'),
 	_ = require('underscore');
 
-var MAX_QR_CODE_CAPACITY = 1270; // "level H" QR codes should support up to 1273 characters, but I have seen the qrcode library failing beyond 1270
+var MAX_QR_CODE_CAPACITY = 1268; // "level H" QR codes should support up to 1273 characters, but I have seen the qrcode library failing beyond 1268
 
 /* This is a wrapper to QRCode.draw. As QRCode at the moment does not allow
    much control over the size of the QR code being generated, this function 
