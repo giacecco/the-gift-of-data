@@ -15,10 +15,10 @@ var async = require('async'),
 	QRCodes = require('./qrcodes');
 
 var CARD_SIZE_X = 1795,
-	CARD_SIZE_Y = 1287, // the final artwork size is 109mm x 152mm
+	CARD_SIZE_Y = 1287, // Moo-specified final artwork size is 109mm x 152mm
 	SAFE_AREA_X = 40,
 	SAFE_AREA_Y = 40, // determined experimentally by uploading the images to Moo
-	QR_CODE_SIZE = 580,  
+	QR_CODE_SIZE = 580, // determined experimentally
 	FOOTER_FONT_SIZE = 30,
 	FOOTER_HEIGHT = FOOTER_FONT_SIZE * 2,
 	ROWS_PER_PAGE = Math.floor((CARD_SIZE_Y - FOOTER_HEIGHT) / QR_CODE_SIZE),
