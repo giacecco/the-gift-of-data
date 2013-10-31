@@ -3,12 +3,14 @@ var async = require('async'),
 	Canvas = require('canvas'),
 	_ = require('underscore'),
 	argv = require('optimist') 
-		.usage('Usage: $0 --in inputFile --out outputFolder] [--decompression decompression%] [--footer "footer message"]')
+		.usage('Usage: $0 --in inputFile --out outputFolder] [--zoom zoom%] [--footer "footer message"] [--maxpages maxNoOfPages]')
 		.demand([ 'in', 'out' ])
 		.alias('in', 'i')
 		.alias('out', 'o')
-		.alias('decompression', 'd')
+		.alias('zoom', 'z')
 		.alias('footer', 'f')
+		.alias('maxpages', 'm')
+		.default('zoom', '100')
 		.argv,
 	QRCodes = require('./qrcodes');
 
@@ -49,20 +51,18 @@ var createPagesPass1 = function (sourceText, options, callback) {
 		page = 1,
 		row = 0,
 		col = 0,
-		foundLastPage = false,
+		foundLastQr = false,
 		canvas,
 		ctx;
 	createHeader();
 	async.whilst(function () {
-		return !foundLastPage;
+		return !foundLastQr;
 	}, function (callback) {
 		QRCodes.draw(sourceText, { targetSize: Math.floor(QR_CODE_SIZE / options.zoom) }, function (err, text, qRCanvas) {
 			// console.log("========== Card " + page + " Row " + row + " Col " + col + " ==========");
 			// console.log(text);
-			var actualQRCodeSize = Math.ceil(QR_CODE_SIZE * options.zoom),
-				img = new Canvas.Image;
+			var img = new Canvas.Image;
 			img.src = qRCanvas.toBuffer();
-			foundLastPage = sourceText.length == text.length;
 			ctx.drawImage(
 				img, 
 				SAFE_AREA_X + col * (QR_CODE_SIZE + HORIZONTAL_SPACING), 
@@ -70,18 +70,23 @@ var createPagesPass1 = function (sourceText, options, callback) {
 				options.zoom != 1. ? QR_CODE_SIZE : img.width,
 				options.zoom != 1. ? QR_CODE_SIZE : img.height
 			);
+			foundLastQr = 
+				sourceText.length == text.length || 
+				(options.maxPages ? (col + 1 == COLS_PER_PAGE) && (row + 1 == ROWS_PER_PAGE) && (page == options.maxPages) : false);
 			// for the next round
-			sourceText = sourceText.substring(text.length, sourceText.length);
-			col++;
-			if (col == COLS_PER_PAGE) {
-				col = 0;
-				row++;
-			}
-			if (row == ROWS_PER_PAGE) {
-				pages.push(canvas);
-				page++;
-				row = 0;
-				createHeader();
+			if (!foundLastQr) {
+				sourceText = sourceText.substring(text.length, sourceText.length);
+				col++;
+				if (col == COLS_PER_PAGE) {
+					col = 0;
+					row++;
+				}
+				if (row == ROWS_PER_PAGE) {
+					pages.push(canvas);
+					page++;
+					row = 0;
+					createHeader();
+				}
 			}
 			callback(null);
 		});
@@ -120,6 +125,14 @@ var savePages = function (sourceText, options, callback) {
 
 
 var sourceText = fs.readFileSync(argv.in, { encoding: 'utf8' });
-savePages(sourceText, { zoom: 1., footer: argv.footer }, function (err) {
-	console.log("Completed.");
-})
+savePages(
+	sourceText, 
+	{ 
+		maxPages: argv.maxpages, 
+		zoom: parseFloat(argv.zoom) / 100., 
+		footer: argv.footer 
+	}, 
+	function (err) {
+		console.log("Completed.");
+	}
+);
