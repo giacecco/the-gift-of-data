@@ -16,7 +16,6 @@ var CARD_SIZE_X = 1795,
 	CARD_SIZE_Y = 1287, // the final artwork size is 109mm x 152mm
 	SAFE_AREA_X = 40,
 	SAFE_AREA_Y = 40, // determined experimentally by uploading the images to Moo
-	MAX_QR_CODE_CAPACITY = 1270, // "level H" QR codes should support up to 1273 characters, but I have seen the qrcode library failing beyond 1270
 	QR_CODE_SIZE = 580,  
 	FOOTER_FONT_SIZE = 30,
 	FOOTER_HEIGHT = FOOTER_FONT_SIZE * 2,
@@ -28,6 +27,7 @@ var CARD_SIZE_X = 1795,
 
 var createPages = function (sourceText, options, callback) {
 	options = options || { };
+	options.zoom = options.zoom || 1.;
 	options.footer = options.footer ? " - " + options.footer : "";
 	createPagesPass1(sourceText, options, function (err, pages) {
 		createPagesPass2(pages, options, function (err, pages) {
@@ -56,12 +56,20 @@ var createPagesPass1 = function (sourceText, options, callback) {
 	async.whilst(function () {
 		return !foundLastPage;
 	}, function (callback) {
-		QRCodes.makeQRCodeImage(sourceText, QR_CODE_SIZE, function (err, text, image) {
+		QRCodes.draw(sourceText, { targetSize: Math.floor(QR_CODE_SIZE / options.zoom) }, function (err, text, qRCanvas) {
 			// console.log("========== Card " + page + " Row " + row + " Col " + col + " ==========");
 			// console.log(text);
+			var actualQRCodeSize = Math.ceil(QR_CODE_SIZE * options.zoom),
+				img = new Canvas.Image;
+			img.src = qRCanvas.toBuffer();
 			foundLastPage = sourceText.length == text.length;
+			ctx.drawImage(
+				img, 
+				SAFE_AREA_X + col * (QR_CODE_SIZE + HORIZONTAL_SPACING), 
+				SAFE_AREA_Y + row * (QR_CODE_SIZE + VERTICAL_SPACING)
+			);
+			// for the next round
 			sourceText = sourceText.substring(text.length, sourceText.length);
-			ctx.drawImage(image, SAFE_AREA_X + col * (QR_CODE_SIZE + HORIZONTAL_SPACING), SAFE_AREA_Y + row * (QR_CODE_SIZE + VERTICAL_SPACING));
 			col++;
 			if (col == COLS_PER_PAGE) {
 				col = 0;
@@ -110,6 +118,6 @@ var savePages = function (sourceText, options, callback) {
 
 
 var sourceText = fs.readFileSync(argv.in, { encoding: 'utf8' });
-savePages(sourceText, { decompression: argv.decompression, footer: argv.footer }, function (err) {
+savePages(sourceText, { zoom: 1., footer: argv.footer }, function (err) {
 	console.log("Completed.");
 })
