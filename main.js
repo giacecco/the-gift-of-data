@@ -66,7 +66,9 @@ var createPagesPass1 = function (sourceText, options, callback) {
 			ctx.drawImage(
 				img, 
 				SAFE_AREA_X + col * (QR_CODE_SIZE + HORIZONTAL_SPACING), 
-				SAFE_AREA_Y + row * (QR_CODE_SIZE + VERTICAL_SPACING)
+				SAFE_AREA_Y + row * (QR_CODE_SIZE + VERTICAL_SPACING),
+				options.zoom != 1. ? QR_CODE_SIZE : img.width,
+				options.zoom != 1. ? QR_CODE_SIZE : img.height
 			);
 			// for the next round
 			sourceText = sourceText.substring(text.length, sourceText.length);
