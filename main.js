@@ -1,7 +1,6 @@
 var async = require('async'),
 	fs = require('fs'),
 	Canvas = require('canvas'),
-	QRCode = require('qrcode')
 	_ = require('underscore'),
 	argv = require('optimist') 
 		.usage('Usage: $0 --in inputFile --out outputFolder] [--decompression decompression%] [--footer "footer message"]')
@@ -10,7 +9,8 @@ var async = require('async'),
 		.alias('out', 'o')
 		.alias('decompression', 'd')
 		.alias('footer', 'f')
-		.argv;
+		.argv,
+	QRCodes = require('./qrcodes');
 
 var CARD_SIZE_X = 1795,
 	CARD_SIZE_Y = 1287, // the final artwork size is 109mm x 152mm
@@ -25,27 +25,6 @@ var CARD_SIZE_X = 1795,
 	QRS_PER_PAGE = ROWS_PER_PAGE * COLS_PER_PAGE,
 	HORIZONTAL_SPACING = Math.floor((CARD_SIZE_X - SAFE_AREA_X * 2 - QR_CODE_SIZE * COLS_PER_PAGE) / (COLS_PER_PAGE - 1)),
 	VERTICAL_SPACING = Math.floor((CARD_SIZE_Y - SAFE_AREA_Y * 2 - QR_CODE_SIZE * ROWS_PER_PAGE - FOOTER_HEIGHT) / (ROWS_PER_PAGE - 1));
-
-var makeQRCodeImage = function (sourceText, targetSize, callback) {
-	var	canvas = new Canvas(CARD_SIZE_X, CARD_SIZE_Y),
-		ctx = canvas.getContext('2d'),
-		img = undefined;
-	sourceText = sourceText.substring(0, Math.min(sourceText.length, MAX_QR_CODE_CAPACITY)),
-	async.doWhilst(function (callback) {
-		QRCode.draw(sourceText, undefined, function (err, qrCanvas) {
-			img = new Canvas.Image;
-			img.src = qrCanvas.toBuffer();
-			callback(null);
-		});
-	}, function () {
-		var found = img.width <= targetSize;
-		if (!found) sourceText = sourceText.substring(0, Math.floor(sourceText.length * Math.pow(targetSize, 2) / Math.pow(img.width, 2)));
-		return !found;
-	}, function (err) {
-		callback(err, sourceText, img);
-	});
-};
-
 
 var createPages = function (sourceText, options, callback) {
 	options = options || { };
@@ -77,7 +56,7 @@ var createPagesPass1 = function (sourceText, options, callback) {
 	async.whilst(function () {
 		return !foundLastPage;
 	}, function (callback) {
-		makeQRCodeImage(sourceText, QR_CODE_SIZE, function (err, text, image) {
+		QRCodes.makeQRCodeImage(sourceText, QR_CODE_SIZE, function (err, text, image) {
 			// console.log("========== Card " + page + " Row " + row + " Col " + col + " ==========");
 			// console.log(text);
 			foundLastPage = sourceText.length == text.length;
