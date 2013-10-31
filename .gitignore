@@ -1,4 +1,5 @@
 *.txt
+!example.txt
 *.cards
 moo_credentials.json
 node_modules

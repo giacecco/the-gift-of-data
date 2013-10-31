@@ -59,8 +59,7 @@ var createPagesPass1 = function (sourceText, options, callback) {
 		return !foundLastQr;
 	}, function (callback) {
 		QRCodes.draw(sourceText, { targetSize: Math.floor(QR_CODE_SIZE / options.zoom) }, function (err, text, qRCanvas) {
-			// console.log("========== Card " + page + " Row " + row + " Col " + col + " ==========");
-			// console.log(text);
+			console.log("qr: " + text);
 			var img = new Canvas.Image;
 			img.src = qRCanvas.toBuffer();
 			ctx.drawImage(
