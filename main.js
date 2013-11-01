@@ -1,12 +1,14 @@
 var async = require('async'),
 	fs = require('fs'),
 	Canvas = require('canvas'),
+	zlib = require('zlib'),
 	_ = require('underscore'),
 	argv = require('optimist') 
-		.usage('Usage: $0 --in inputFile --out outputFolder] [--zoom zoom%] [--footer "footer message"] [--maxpages maxNoOfPages]')
+		.usage('Usage: $0 --in inputFile --out outputFolder] [--utf8] [--zoom zoom%] [--footer "footer message"] [--maxpages maxNoOfPages]')
 		.demand([ 'in', 'out' ])
 		.alias('in', 'i')
 		.alias('out', 'o')
+		.alias('utf8', 'u')
 		.alias('zoom', 'z')
 		.alias('footer', 'f')
 		.alias('maxpages', 'm')
@@ -59,7 +61,6 @@ var createPagesPass1 = function (sourceText, options, callback) {
 		return !foundLastQr;
 	}, function (callback) {
 		QRCodes.draw(sourceText, { targetSize: Math.floor(QR_CODE_SIZE / options.zoom) }, function (err, text, qRCanvas) {
-			console.log("qr: " + text);
 			var img = new Canvas.Image;
 			img.src = qRCanvas.toBuffer();
 			ctx.drawImage(
@@ -123,15 +124,26 @@ var savePages = function (sourceText, options, callback) {
 };
 
 
-var sourceText = fs.readFileSync(argv.in, { encoding: 'utf8' });
-savePages(
-	sourceText, 
-	{ 
-		maxPages: argv.maxpages, 
-		zoom: parseFloat(argv.zoom) / 100., 
-		footer: argv.footer 
-	}, 
-	function (err) {
-		console.log("Completed.");
+fs.readFile(argv.in, { encoding: (argv.utf8 ? 'utf8' : undefined) }, function (err, buffer) {
+
+	var save = function (text) {
+		savePages(
+			text, 
+			{	maxPages: argv.maxpages, 
+				zoom: parseFloat(argv.zoom) / 100., 
+				footer: argv.footer }, 
+			function (err) {
+				console.log("Completed.");
+			}
+		);
 	}
-);
+
+	buffer = argv.utf8 ? buffer : buffer.toString('base64')
+	if (!argv.raw) {
+		zlib.deflate(buffer, function(err, buffer) {
+			save(buffer.toString('base64'));
+		});
+	} else {
+		save(buffer);
+	}
+});
