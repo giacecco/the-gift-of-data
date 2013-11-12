@@ -1,5 +1,7 @@
 *.txt
 !example.txt
 *.cards
-moo_credentials.json
+*.csv
+*.csv.gz
+projects
 node_modules

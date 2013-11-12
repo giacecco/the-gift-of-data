@@ -4,7 +4,7 @@ var async = require('async'),
 	zlib = require('zlib'),
 	_ = require('underscore'),
 	argv = require('optimist') 
-		.usage('Usage: $0 --in inputFile --out outputFolder] [--utf8] [--zoom zoom%] [--footer "footer message"] [--maxpages maxNoOfPages]')
+		.usage('Usage: $0 --in inputFile --out outputFolder] [--utf8] [--raw] [--zoom zoom%] [--footer "footer message"] [--maxpages maxNoOfPages]')
 		.demand([ 'in', 'out' ])
 		.alias('in', 'i')
 		.alias('out', 'o')
