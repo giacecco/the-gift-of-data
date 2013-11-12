@@ -5,3 +5,4 @@
 *.csv.gz
 projects
 node_modules
+.Rproj.user
